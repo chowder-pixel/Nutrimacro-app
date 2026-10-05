@@ -2,103 +2,122 @@ import hashlib
 import sqlite3
 import numpy as np
 import pandas as pd
+import plotly.express as px
 from scipy.optimize import minimize
 import streamlit as st
 
 # --- CONFIGURACIÓN DE LA PÁGINA ---
 st.set_page_config(
-    page_title="CYBERMACRO // Elite Nutrition Core",
+    page_title="CYBERMACRO // Core v5.0 Master Elite",
     page_icon="⚡",
     layout="centered",
 )
 
-# --- DISEÑO UI/UX AVANZADO: ESTILO CYBERGOTH & PRÉMIUM ---
+# --- DISEÑO UI/UX AVANZADO: CYBERGOTH & HUD INDUSTRIAL ---
 st.markdown("""
     <style>
-    /* Importación de tipografías futuristas de Google Fonts */
-    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Inter:wght@300;400;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Share+Tech+Mono&family=Inter:wght@300;400;600&display=swap');
 
-    /* Fondo principal: Negro Absoluto y degradados oscuros */
-    .main {
-        background-color: #030305;
-        color: #f1f5f9;
-    }
+    .main { background-color: #010002; color: #f1f5f9; }
     .stApp {
-        background: radial-gradient(circle at 50% 10%, #1a0826 0%, #08040c 45%, #020203 100%);
+        background: radial-gradient(circle at 50% 5%, #18032c 0%, #07010a 45%, #000000 100%);
         color: #f1f5f9;
         font-family: 'Inter', sans-serif;
     }
 
-    /* Tipografías separadas: Orbitron para títulos impactantes */
+    /* Tipografías de Alta Tecnología */
     h1, h2, h3, h4 {
         font-family: 'Orbitron', sans-serif !important;
-        letter-spacing: 1.5px;
+        letter-spacing: 2px;
         text-transform: uppercase;
     }
     
     h1 {
         color: #ffffff !important;
-        text-shadow: 0 0 15px rgba(168, 85, 247, 0.6), 0 0 30px rgba(59, 130, 246, 0.4);
+        text-shadow: 0 0 25px rgba(239, 68, 68, 0.8), 0 0 50px rgba(126, 34, 206, 0.6);
         font-weight: 900 !important;
+        font-size: 2rem;
+        text-align: center;
     }
 
     h2, h3 {
         color: #38bdf8 !important;
-        text-shadow: 0 0 10px rgba(56, 189, 248, 0.3);
+        text-shadow: 0 0 12px rgba(56, 189, 248, 0.5);
     }
 
-    /* Botones Cybergoth (Neón Rojo, Azul y Morado) */
+    /* Tarjetas Holográficas de Alta Densidad */
+    .cyber-hud-card {
+        background: rgba(10, 4, 18, 0.85);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(126, 34, 206, 0.5);
+        border-radius: 16px;
+        padding: 22px;
+        box-shadow: 0 10px 40px 0 rgba(0, 0, 0, 0.7), inset 0 0 15px rgba(126, 34, 206, 0.15);
+        margin-bottom: 22px;
+    }
+
+    /* Botones Neón Cybergoth Avanzados */
     .stButton>button {
-        background: linear-gradient(135deg, #7e22ce 0%, #2563eb 50%, #dc2626 100%);
+        background: linear-gradient(135deg, #7e22ce 0%, #1d4ed8 50%, #dc2626 100%);
         color: #ffffff;
-        border-radius: 8px;
-        padding: 0.6rem 1.2rem;
+        border-radius: 10px;
+        padding: 0.75rem 1.5rem;
         font-family: 'Orbitron', sans-serif;
         font-weight: 700;
-        letter-spacing: 1px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        box-shadow: 0 0 15px rgba(126, 34, 206, 0.5), inset 0 0 10px rgba(59, 130, 246, 0.3);
-        transition: all 0.3s ease-in-out;
+        letter-spacing: 1.5px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        box-shadow: 0 0 25px rgba(126, 34, 206, 0.7), inset 0 0 12px rgba(220, 38, 38, 0.5);
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         width: 100%;
     }
     .stButton>button:hover {
-        background: linear-gradient(135deg, #9333ea 0%, #3b82f6 50%, #ef4444 100%);
-        box-shadow: 0 0 25px rgba(239, 68, 68, 0.8), 0 0 15px rgba(59, 130, 246, 0.6);
+        background: linear-gradient(135deg, #9333ea 0%, #2563eb 50%, #ef4444 100%);
+        box-shadow: 0 0 35px rgba(239, 68, 68, 0.95), 0 0 25px rgba(59, 130, 246, 0.8);
         transform: translateY(-2px);
     }
 
-    /* Tarjetas de Métricas de Élite (Bordes Neón) */
+    /* Métricas con Estilo de Telemetría Cibernética */
     div[data-testid="stMetric"] {
-        background: rgba(15, 10, 25, 0.85);
-        padding: 18px;
+        background: rgba(12, 5, 22, 0.95);
+        padding: 16px;
         border-radius: 12px;
-        border: 1px solid #7e22ce;
-        box-shadow: 0 0 15px rgba(126, 34, 206, 0.2);
+        border: 1px solid #ef4444;
+        box-shadow: 0 0 20px rgba(239, 68, 68, 0.2);
     }
     div[data-testid="stMetric"] label {
-        color: #cbd5e1 !important;
-        font-family: 'Orbitron', sans-serif;
+        color: #94a3b8 !important;
+        font-family: 'Share Tech Mono', monospace;
         font-size: 0.85rem;
     }
     div[data-testid="stMetric"] div[data-testid="stMetricValue"] {
         color: #f43f5e !important;
         font-family: 'Orbitron', sans-serif;
-        font-weight: 700;
+        font-weight: 800;
     }
 
-    /* Campos de entrada y selectores estéticos */
+    /* Inputs de Terminal */
     .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {
-        background-color: #0b0712 !important;
-        color: #ffffff !important;
-        border: 1px solid #3b82f6 !important;
+        background-color: #040207 !important;
+        color: #f8fafc !important;
+        border: 1px solid #7e22ce !important;
         border-radius: 8px;
-        font-family: 'Inter', sans-serif;
+        font-family: 'Share Tech Mono', monospace;
     }
     
-    /* Contenedores y Sidebar */
     section[data-testid="stSidebar"] {
-        background-color: #050308;
-        border-right: 1px solid rgba(126, 34, 206, 0.3);
+        background-color: #030105;
+        border-right: 1px solid rgba(220, 38, 38, 0.4);
+    }
+    
+    .hud-status {
+        font-family: 'Share Tech Mono', monospace;
+        color: #38bdf8;
+        font-size: 0.85rem;
+        background: rgba(56, 189, 248, 0.1);
+        padding: 6px 12px;
+        border-radius: 6px;
+        border: 1px solid rgba(56, 189, 248, 0.3);
+        margin-bottom: 15px;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -168,24 +187,29 @@ if "logged_in" not in st.session_state:
   st.session_state.user_id = None
   st.session_state.username = ""
 
-# --- BARRA LATERAL CYBERPUNK ---
+# --- BARRA LATERAL HUD ---
 with st.sidebar:
   st.markdown(
       "<h2"
       " style='text-align: center; color: #ef4444; font-family: Orbitron;"
-      " text-shadow: 0 0 10px rgba(239, 68, 68, 0.8);'>⚡ CYBERMACRO ⚡</h2>",
+      " text-shadow: 0 0 15px rgba(239, 68, 68, 0.9);'>⚡ CYBERMACRO ⚡</h2>",
+      unsafe_allow_html=True,
+  )
+  st.markdown(
+      "<div style='text-align: center;' class='hud-status'>STATUS: SECURE //"
+      " V5.0</div>",
       unsafe_allow_html=True,
   )
   st.markdown("---")
 
   if not st.session_state.logged_in:
-    menu = st.radio("ACCESO AL SISTEMA", ["Iniciar Sesión", "Registrarse"])
+    menu = st.radio("CONTROL DE ACCESO", ["Iniciar Sesión", "Registrarse"])
 
     if menu == "Iniciar Sesión":
       st.subheader("🔑 Autenticación")
-      user_input = st.text_input("Usuario")
-      pass_input = st.text_input("Contraseña", type="password")
-      if st.button("ACCEDER"):
+      user_input = st.text_input("ID de Nodo")
+      pass_input = st.text_input("Clave de Encriptación", type="password")
+      if st.button("INICIAR SESIÓN"):
         user_id = verificar_usuario(user_input, pass_input)
         if user_id:
           st.session_state.logged_in = True
@@ -193,19 +217,19 @@ with st.sidebar:
           st.session_state.username = user_input
           st.rerun()
         else:
-          st.error("Credenciales inválidas.")
+          st.error("Credenciales no válidas.")
     else:
       st.subheader("📝 Nuevo Registro")
-      new_user = st.text_input("Usuario")
-      new_pass = st.text_input("Contraseña", type="password")
-      if st.button("REGISTRAR"):
+      new_user = st.text_input("Crear ID")
+      new_pass = st.text_input("Crear Clave", type="password")
+      if st.button("REGISTRAR NODO"):
         if new_user and new_pass:
           if registrar_usuario(new_user, new_pass):
-            st.success("¡Usuario creado!")
+            st.success("¡Nodo registrado con éxito!")
           else:
-            st.error("El usuario ya existe.")
+            st.error("El ID ya está registrado.")
         else:
-          st.warning("Completa los campos.")
+          st.warning("Completa todos los campos.")
   else:
     st.markdown(f"👤 Operador: **{st.session_state.username}**")
     if st.button("CERRAR SESIÓN"):
@@ -215,7 +239,7 @@ with st.sidebar:
       st.rerun()
 
     st.markdown("---")
-    st.subheader("📂 Archivos de Platos")
+    st.subheader("📂 Banco de Recetas")
     conn = sqlite3.connect("usuarios.db")
     cursor = conn.cursor()
     cursor.execute(
@@ -230,30 +254,31 @@ with st.sidebar:
         with st.expander(p_nombre):
           st.text(p_detalles)
     else:
-      st.info("Sin registros de platos.")
+      st.info("Sin registros almacenados.")
 
 
 # --- APLICACIÓN PRINCIPAL ---
+st.markdown("<h1>// CYBERMACRO CORE //</h1>", unsafe_allow_html=True)
 st.markdown(
-    "<h1 style='text-align: center;'>// CYBERMACRO CORE //</h1>",
-    unsafe_allow_html=True,
-)
-st.markdown(
-    "<p style='text-align: center; color: #a855f7; font-family: Orbitron;"
-    " font-size: 0.9rem;'>SISTEMA INTELIGENTE DE CÁLCULO NUTRICIONAL Y MTRX"
-    " OPTIMIZATION</p>",
+    "<p style='text-align: center; color: #38bdf8; font-family: Share Tech"
+    " Mono, monospace; font-size: 0.95rem;'>SISTEMA NEURONAL DE CÁLCULO"
+    " MILIMÉTRICO DE MACRONUTRIENTES</p>",
     unsafe_allow_html=True,
 )
 
 if not st.session_state.logged_in:
-  st.warning(
-      "🔒 ACCESO RESTRINGIDO: Por favor inicia sesión en la barra lateral para"
-      " activar el núcleo de procesamiento."
-  )
+  st.markdown("""
+        <div class="cyber-hud-card" style="text-align: center;">
+            <h3 style="color: #ef4444;">ACCESO RESTRINGIDO A NÚCLEO</h3>
+            <p>Inicia sesión o regístrate en la barra lateral para desplegar el motor de cálculo matemático de alta precisión y las bases de datos de mercado filtradas.</p>
+        </div>
+    """, unsafe_allow_html=True)
 else:
   st.markdown("<br>", unsafe_allow_html=True)
 
-  # METAS
+  # CONTENEDOR 1: METAS
+  st.markdown('<div class="cyber-hud-card">', unsafe_allow_html=True)
+  st.markdown("### 🎯 1. Parámetros de Carga (Metas de Macros)")
   meta_col1, meta_col2, meta_col3 = st.columns(3)
   with meta_col1:
     meta_p = st.number_input(
@@ -267,14 +292,108 @@ else:
     meta_g = st.number_input(
         "Grasas Objetivo (g)", min_value=0.0, value=4.0, step=1.0
     )
+  st.markdown("</div>", unsafe_allow_html=True)
 
 
-  # --- CONSULTA MASIVA CON FILTRO ANTI-NESTLÉ ---
+  # --- BASE DE DATOS MASIVA MULTINIVEL CON FILTRO ANTI-NESTLÉ ---
   @st.cache_data
-  def buscar_alimentos_mercado(query):
-    url = f"https://world.openfoodfacts.org/cgi/search.pl?search_terms={query}&search_simple=1&action=process&json=1&page_size=30"
+  def buscar_alimentos_multidb(query, tipo_macro):
+    respaldos = {
+        "prot": {
+            "Pechuga de pollo (Orgánica) [P:31g|C:0g|G:3.6g]": {
+                "nombre": "Pechuga de pollo (cocida)",
+                "p": 31.0,
+                "c": 0.0,
+                "g": 3.6,
+            },
+            "Atún aleta amarilla en agua [P:26g|C:0g|G:0.8g]": {
+                "nombre": "Atún en agua",
+                "p": 26.0,
+                "c": 0.0,
+                "g": 0.8,
+            },
+            "Claras de huevo pasteurizadas [P:11g|C:0.7g|G:0.2g]": {
+                "nombre": "Claras de huevo",
+                "p": 11.0,
+                "c": 0.7,
+                "g": 0.2,
+            },
+            "Carne magra de res 95/5 [P:27g|C:0g|G:4.5g]": {
+                "nombre": "Carne magra de res",
+                "p": 27.0,
+                "c": 0.0,
+                "g": 4.5,
+            },
+            "Tofu firme orgánico [P:15g|C:2g|G:8g]": {
+                "nombre": "Tofu firme",
+                "p": 15.0,
+                "c": 2.0,
+                "g": 8.0,
+            },
+        },
+        "carb": {
+            "Arroz blanco basmati [P:2.7g|C:28g|G:0.3g]": {
+                "nombre": "Arroz blanco (cocido)",
+                "p": 2.7,
+                "c": 28.0,
+                "g": 0.3,
+            },
+            "Papa holandiza al vapor [P:2g|C:17g|G:0.1g]": {
+                "nombre": "Papa cocida",
+                "p": 2.0,
+                "c": 17.0,
+                "g": 0.1,
+            },
+            "Avena integral laminada [P:13.5g|C:60g|G:7g]": {
+                "nombre": "Avena en hojuelas",
+                "p": 13.5,
+                "c": 60.0,
+                "g": 7.0,
+            },
+            "Pan de masa madre integral [P:9g|C:43g|G:2.5g]": {
+                "nombre": "Pan integral masa madre",
+                "p": 9.0,
+                "c": 43.0,
+                "g": 2.5,
+            },
+            "Quinoa real cocida [P:4.4g|C:21.3g|G:1.9g]": {
+                "nombre": "Quinoa cocida",
+                "p": 4.4,
+                "c": 21.3,
+                "g": 1.9,
+            },
+        },
+        "grasa": {
+            "Aceite de oliva virgen extra [P:0g|C:0g|G:100g]": {
+                "nombre": "Aceite de oliva",
+                "p": 0.0,
+                "c": 0.0,
+                "g": 100.0,
+            },
+            "Mantequilla de maní 100% natural [P:25g|C:20g|G:50g]": {
+                "nombre": "Mantequilla de maní",
+                "p": 25.0,
+                "c": 20.0,
+                "g": 50.0,
+            },
+            "Aguacate Hass fresco [P:2g|C:9g|G:15g]": {
+                "nombre": "Aguacate",
+                "p": 2.0,
+                "c": 9.0,
+                "g": 15.0,
+            },
+            "Almendras tostadas sin sal [P:21g|C:22g|G:50g]": {
+                "nombre": "Almendras",
+                "p": 21.0,
+                "c": 22.0,
+                "g": 50.0,
+            },
+        },
+    }
+
+    url = f"https://world.openfoodfacts.org/cgi/search.pl?search_terms={query}&search_simple=1&action=process&json=1&page_size=35"
     try:
-      res = requests.get(url, timeout=5).json()
+      res = requests.get(url, timeout=4).json()
       alimentos = {}
       marcas_prohibidas = [
           "nestle",
@@ -310,53 +429,47 @@ else:
           etiqueta = f"{nombre} ({p.get('brands', 'Genérico')}) [P:{pr}g|C:{cr}g|G:{gr}g]"
           alimentos[etiqueta] = {"nombre": nombre, "p": pr, "c": cr, "g": gr}
 
+      if not alimentos:
+        return respaldos[tipo_macro]
       return alimentos
     except:
-      return {}
+      return respaldos[tipo_macro]
 
 
-  st.markdown("<br>", unsafe_allow_html=True)
+  # CONTENEDOR 2: SELECCIÓN DE MERCADO
+  st.markdown('<div class="cyber-hud-card">', unsafe_allow_html=True)
   st.markdown(
-      "### 🌐 Matriz de Selección Masiva (Filtro Anti-Nestlé Activo)"
+      "### 🌐 2. Matriz de Mercado Global (Filtro Anti-Nestlé Activo)"
   )
 
   q_prot = st.text_input(
-      "Base de Datos: Buscar Proteína (ej. 'pollo', 'atun')", "pollo"
+      "Query Base de Datos: Proteína (ej. 'pollo', 'atun')", "pollo"
   )
-  opciones_prot = (
-      buscar_alimentos_mercado(q_prot) if q_prot else {"Básicos (Pollo)": {"nombre": "Pechuga de pollo", "p": 31.0, "c": 0.0, "g": 3.6}}
-  )
+  opciones_prot = buscar_alimentos_multidb(q_prot, "prot") if q_prot else {}
   sel_prot = st.selectbox(
-      "Seleccionar Fuente Proteica:",
-      list(opciones_prot.keys()) if opciones_prot else ["Sin resultados"],
+      "Seleccionar Fuente Proteica:", list(opciones_prot.keys())
   )
 
   q_carb = st.text_input(
-      "Base de Datos: Buscar Carbohidrato (ej. 'arroz', 'avena')", "arroz"
+      "Query Base de Datos: Carbohidrato (ej. 'arroz', 'quinoa')", "arroz"
   )
-  opciones_carb = (
-      buscar_alimentos_mercado(q_carb) if q_carb else {"Básicos (Arroz)": {"nombre": "Arroz blanco", "p": 2.7, "c": 28.0, "g": 0.3}}
-  )
+  opciones_carb = buscar_alimentos_multidb(q_carb, "carb") if q_carb else {}
   sel_carb = st.selectbox(
-      "Seleccionar Fuente de Carbohidratos:",
-      list(opciones_carb.keys()) if opciones_carb else ["Sin resultados"],
+      "Seleccionar Fuente de Carbohidratos:", list(opciones_carb.keys())
   )
 
   q_grasa = st.text_input(
-      "Base de Datos: Buscar Grasa (ej. 'aceite de oliva', 'aguacate')",
-      "aceite",
+      "Query Base de Datos: Grasa (ej. 'aceite', 'almendras')", "aceite"
   )
-  opciones_grasa = (
-      buscar_alimentos_mercado(q_grasa) if q_grasa else {"Básicos (Aceite)": {"nombre": "Aceite de oliva", "p": 0.0, "c": 0.0, "g": 100.0}}
-  )
+  opciones_grasa = buscar_alimentos_multidb(q_grasa, "grasa") if q_grasa else {}
   sel_grasa = st.selectbox(
-      "Seleccionar Fuente de Grasas:",
-      list(opciones_grasa.keys()) if opciones_grasa else ["Sin resultados"],
+      "Seleccionar Fuente de Grasas:", list(opciones_grasa.keys())
   )
+  st.markdown("</div>", unsafe_allow_html=True)
 
 
-  # --- MOTOR DE CÁLCULO ---
-  def calcular_porciones_mercado(mp, mc, mg, p_dict, c_dict, g_dict):
+  # --- MOTOR DE CÁLCULO SLSQP ---
+  def calcular_porciones_elite(mp, mc, mg, p_dict, c_dict, g_dict):
     seleccionados = [p_dict, c_dict, g_dict]
     n = len(seleccionados)
     x0 = [50.0, 50.0, 10.0]
@@ -366,11 +479,11 @@ else:
       ct = sum(item["c"] * x[i] / 100 for i, item in enumerate(seleccionados))
       gt = sum(item["g"] * x[i] / 100 for i, item in enumerate(seleccionados))
       return (
-          (pt - mp) ** 2 * 2.0 + (ct - mc) ** 2 + (gt - mg) ** 2
+          (pt - mp) ** 2 * 2.5 + (ct - mc) ** 2 * 1.5 + (gt - mg) ** 2 * 2.0
       )
 
-    bounds = [(0.0, 1000.0) for _ in range(n)]
-    res = minimize(objetivo, x0, method="SLSQP", bounds=bounds, tol=1e-6)
+    bounds = [(0.0, 1200.0) for _ in range(n)]
+    res = minimize(objetivo, x0, method="SLSQP", bounds=bounds, tol=1e-8)
 
     resultados = {}
     for i, item in enumerate(seleccionados):
@@ -389,7 +502,10 @@ else:
       "⚡ EJECUTAR CÁLCULO NEURONAL DE PORCIONES", use_container_width=True
   ):
     if (
-        sel_prot != "Sin resultados"
+        sel_prot
+        and sel_carb
+        and sel_grasa
+        and sel_prot != "Sin resultados"
         and sel_carb != "Sin resultados"
         and sel_grasa != "Sin resultados"
     ):
@@ -397,14 +513,15 @@ else:
       d_c = opciones_carb[sel_carb]
       d_g = opciones_grasa[sel_grasa]
 
-      calculo = calcular_porciones_mercado(meta_p, meta_c, meta_g, d_p, d_c, d_g)
+      calculo = calcular_porciones_elite(meta_p, meta_c, meta_g, d_p, d_c, d_g)
 
-      st.success("¡Optimización completada con éxito!")
-      st.markdown("### 📊 DIAGNÓSTICO DEL PLATO ÓPTIMO")
+      st.success("¡Optimización milimétrica completada!")
+      st.markdown('<div class="cyber-hud-card">', unsafe_allow_html=True)
+      st.markdown("### 📊 3. Diagnóstico del Plato Óptimo")
 
       datos_tabla = []
       total_p, total_c, total_g = 0, 0, 0
-      detalles_texto = f"Meta: {meta_p}P / {meta_c}C / {meta_g}G\n"
+      detalles_texto = f"Meta: {meta_p}P / {meta_c}C / {meta_g}G\n\n"
 
       for ing, info in calculo.items():
         gramos = info["gramos"]
@@ -427,6 +544,7 @@ else:
 
       st.dataframe(pd.DataFrame(datos_tabla), use_container_width=True)
 
+      # Telemetría de métricas
       m1, m2, m3 = st.columns(3)
       m1.metric(
           "PROT ADQUIRIDA",
@@ -444,20 +562,72 @@ else:
           delta=f"{round(total_g - meta_g, 1)} g",
       )
 
+      # --- SUB-NÚCLEO DE HIDRATACIÓN RECOMENDADA ---
+      st.markdown("<br>", unsafe_allow_html=True)
+      st.markdown("#### 💧 Telemetría de Hidratación Recomendada")
+      agua_ml = (meta_p * 12) + 400  # Estimación basada en demanda proteica
+      st.info(
+          f"Para metabolizar eficientemente este perfil de macros,"
+          f" se recomienda una ingesta de agua estimada de **{round(agua_ml)} ml**"
+          " durante las próximas 4 horas."
+      )
+
+      # --- GRÁFICO PLOTLY DE RENDIMIENTO ---
+      df_radar = pd.DataFrame({
+          "Macronutriente": ["Proteína", "Carbohidratos", "Grasas"],
+          "Meta": [meta_p, meta_c, meta_g],
+          "Obtenido": [
+              round(total_p, 1),
+              round(total_c, 1),
+              round(total_g, 1),
+          ],
+      })
+      fig = px.bar(
+          df_radar,
+          x="Macronutriente",
+          y=["Meta", "Obtenido"],
+          barmode="group",
+          title="<b>ANÁLISIS COMPARATIVO DE RENDIMIENTO NUTRICIONAL</b>",
+          color_discrete_sequence=["#7e22ce", "#f43f5e"],
+      )
+      fig.update_layout(
+          plot_bgcolor="rgba(0,0,0,0)",
+          paper_bgcolor="rgba(0,0,0,0)",
+          font_color="#ffffff",
+          font_family="Orbitron",
+      )
+      st.plotly_chart(fig, use_container_width=True)
+
       st.markdown("---")
       nombre_guardar = st.text_input(
-          "Identificador para registrar receta:", "Cybergoth Protocol 01"
+          "Identificador para registrar en base de datos:",
+          "Protocolo Elite v5",
       )
-      if st.button("💾 GUARDAR EN BASE DE DATOS"):
-        conn = sqlite3.connect("usuarios.db")
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT INTO platos_guardados (user_id, nombre_plato, detalles) VALUES"
-            " (?, ?, ?)",
-            (st.session_state.user_id, nombre_guardar, detalles_texto),
+
+      col_b1, col_b2 = st.columns(2)
+      with col_b1:
+        if st.button("💾 REGISTRAR EN NODO"):
+          conn = sqlite3.connect("usuarios.db")
+          cursor = conn.cursor()
+          cursor.execute(
+              "INSERT INTO platos_guardados (user_id, nombre_plato, detalles)"
+              " VALUES (?, ?, ?)",
+              (st.session_state.user_id, nombre_guardar, detalles_texto),
+          )
+          conn.commit()
+          conn.close()
+          st.success("¡Estructura guardada en memoria con éxito!")
+
+      with col_b2:
+        # Botón de exportación directa a texto
+        st.download_button(
+            label="📥 DESCARGAR REPORTE (.TXT)",
+            data=detalles_texto,
+            file_name=f"{nombre_guardar}.txt",
+            mime="text/plain",
+            use_container_width=True,
         )
-        conn.commit()
-        conn.close()
-        st.success("¡Receta registrada con éxito en el sistema!")
+
+      st.markdown("</div>", unsafe_allow_html=True)
     else:
-      st.warning("Verifica las selecciones en la base de datos de mercado.")
+      st.warning("Verifica los parámetros y selecciones en la matriz de mercado.")
